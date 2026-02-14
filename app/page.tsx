@@ -44,19 +44,20 @@ export default function Dashboard() {
     if (status === "authenticated") fetchJobs();
   }, [status, router]);
 
-  // --- FILTERING & SORTING ---
+  // --- FILTERING & SORTING LOGIC ---
 
-  // 1. Filter by Search Term
+  // 1. Filter by Search Term (Organization or Position)
   const filteredJobs = jobs.filter(job => 
-    job.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.position.toLowerCase().includes(searchTerm.toLowerCase())
+    (job.organization?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (job.position?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
-  // 2. Grouping
+  // 2. Pending Jobs (Sorted by Created Date - Newest First)
   const pendingJobs = filteredJobs
     .filter(job => job.status === 'Pending')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+  // 3. Applied Jobs (Sorted by Applied Date - Newest First)
   const appliedJobs = filteredJobs
     .filter(job => job.status === 'Applied')
     .sort((a, b) => {
@@ -65,6 +66,7 @@ export default function Dashboard() {
       return dateB - dateA;
     });
 
+  // 4. Archived Jobs (Interview/Rejected - Sorted by Last Update)
   const archivedJobs = filteredJobs
     .filter(job => ['Interview', 'Rejected'].includes(job.status))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -75,7 +77,11 @@ export default function Dashboard() {
     pending: jobs.filter(j => j.status === 'Pending').length,
     interview: jobs.filter(j => j.status === 'Interview').length,
     applied: jobs.filter(j => j.status === 'Applied').length,
+    rejected: jobs.filter(j => j.status === 'Rejected').length,
   };
+
+  // Get User Name safely
+  const userName = session?.user?.name || session?.user?.email?.split('@')[0] || "User";
 
   // ---------------------------
 
@@ -97,14 +103,14 @@ export default function Dashboard() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-10">
         
         {/* HERO SECTION: Welcome & Stats */}
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Welcome back, User 👋
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                Dashboard
               </h1>
-              <p className="text-slate-500 mt-1">
-                Here is what’s happening with your job applications today.
+              <p className="text-slate-500 mt-1 text-lg">
+                Welcome back, <span className="font-semibold text-blue-600">{userName}</span> 👋
               </p>
             </div>
             
@@ -113,7 +119,7 @@ export default function Dashboard() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
               <Input 
                 placeholder="Search jobs..." 
-                className="pl-9 bg-white border-slate-200 focus:border-blue-500 transition-all"
+                className="pl-9 bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500 transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -121,11 +127,11 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
             <StatCard label="Total Jobs" value={stats.total} icon={Briefcase} color="bg-blue-100 text-blue-700" />
             <StatCard label="Pending Action" value={stats.pending} icon={AlertCircle} color="bg-orange-100 text-orange-700" />
             <StatCard label="Applied" value={stats.applied} icon={CheckCircle2} color="bg-green-100 text-green-700" />
-            <StatCard label="Interviews" value={stats.interview} icon={TrendingUp} color="bg-purple-100 text-purple-700" />
+            <StatCard label="Archived" value={stats.interview + stats.rejected} icon={Archive} color="bg-slate-100 text-slate-700" />
           </div>
         </div>
 
@@ -211,7 +217,7 @@ export default function Dashboard() {
 
 function StatCard({ label, value, icon: Icon, color }: any) {
   return (
-    <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+    <Card className="border-none shadow-sm hover:shadow-md transition-shadow bg-slate-50/50">
       <CardContent className="p-4 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
@@ -227,8 +233,10 @@ function StatCard({ label, value, icon: Icon, color }: any) {
 
 function EmptyState({ message, icon: Icon }: any) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-      <Icon className="h-10 w-10 text-slate-300 mb-3" />
+    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-white">
+      <div className="p-4 bg-slate-50 rounded-full mb-3">
+        <Icon className="h-8 w-8 text-slate-300" />
+      </div>
       <p className="text-slate-500 font-medium text-sm">{message}</p>
     </div>
   );

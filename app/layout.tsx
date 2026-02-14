@@ -1,12 +1,27 @@
-"use client";
-import { SessionProvider } from "next-auth/react";
-import "./globals.css"; // Ensure this exists
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Providers } from "@/components/Providers"; // <--- Import from your new file
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Personal JobTracker",
+  description: "Automated job application tracking dashboard.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body>
-        <SessionProvider>{children}</SessionProvider>
+      <body className={inter.className}>
+        {/* Use the Client Component wrapper here */}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
