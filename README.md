@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+  <h1>🚀 Personal JobTracker</h1>
+  
+  <p>
+    <strong>A Smart, Automated Dashboard for Government & NGO Job Applications.</strong>
+  </p>
 
-First, run the development server:
+  <p>
+    <a href="https://nextjs.org">
+      <img src="https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js" alt="Next.js" />
+    </a>
+    <a href="https://www.mongodb.com">
+      <img src="https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square&logo=mongodb" alt="MongoDB" />
+    </a>
+    <a href="https://cloudinary.com">
+      <img src="https://img.shields.io/badge/Cloudinary-Storage-blue?style=flat-square&logo=cloudinary" alt="Cloudinary" />
+    </a>
+    <a href="https://ui.shadcn.com">
+      <img src="https://img.shields.io/badge/UI-ShadCN-white?style=flat-square&logo=shadcnui" alt="ShadCN" />
+    </a>
+  </p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+  <br />
+</div>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧐 The Problem
+Applying for jobs in Bangladesh (Teletalk, Government, NGOs) involves managing dozens of URLs, user IDs, passwords, and PDF circulars. 
+* **Links expire.**
+* **PDFs get deleted.**
+* **Deadlines are missed.**
+* **Credentials get lost.**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 💡 The Solution
+**JobTracker** is a personal fortress for my career applications. It doesn't just "list" jobs—it **actively captures** them. 
 
-## Learn More
+Simply paste a URL, and the system:
+1.  🕷️ **Scrapes** the deadline and position automatically.
+2.  ☁️ **Downloads** the advertisement PDF and permanently saves it to Cloud Storage (so I never lose it even if the circular is removed).
+3.  ⏳ **Tracks** deadlines with a live countdown.
+4.  🔐 **Secures** my credentials (User/Pass) once I apply.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ✨ Key Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Feature | Description |
+| :--- | :--- |
+| **🤖 Auto-Scraper** | Paste a Teletalk link, and it auto-fetches the *Organization Name*, *Deadline*, and *Position*. |
+| **📄 PDF Archiving** | Automatically detects the "Advertisement PDF" link, downloads it, and uploads it to **Cloudinary** for permanent safe-keeping. |
+| **⏱️ Deadline Logic** | Shows a **live countdown** (e.g., "2 days left"). Auto-calculates expiry status. |
+| **🔐 Credential Vault** | Securely stores `User ID` and `Password` for each specific job *after* application. |
+| **📊 Smart Status** | Visual pipeline: `Pending` → `Applied` → `Interview` → `Rejected`. |
+| **🔎 Notes & Search** | Add exam results, marks, or personal notes (e.g., *"Exam Date: 25th Nov"*). |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Tech Stack & Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is built on the **MERN** stack (modified for Serverless) with a focus on automation.
+
+### **Core**
+* **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+* **Database:** [MongoDB](https://www.mongodb.com/) (Mongoose ODM)
+* **Authentication:** [NextAuth.js](https://next-auth.js.org/) (Credentials Provider)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/) + [ShadCN UI](https://ui.shadcn.com/)
+
+### **Automation & Storage**
+* **Scraper:** `Cheerio` + `Axios` (Server-side parsing of HTML).
+* **Storage:** `Cloudinary API` (Server-side upload of scraped PDFs).
+* **Security:** `Bcrypt` hashing + Environment Variable protection.
+
+---
