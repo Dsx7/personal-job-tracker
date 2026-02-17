@@ -6,10 +6,44 @@ export default function Countdown({ deadlineStr }: { deadlineStr: string }) {
   const [timeLeft, setTimeLeft] = useState("");
   const [isExpired, setIsExpired] = useState(false);
 
+  // Helper: Parse various date formats
+  const parseDate = (str: string) => {
+    if (!str) return null;
+
+    // 1. Try Standard Date first (e.g., "28 Feb 2026")
+    let date = new Date(str);
+    if (!isNaN(date.getTime())) return date;
+
+    // 2. Handle DD/MM/YYYY Format (e.g., "15/03/2026, 05:00 PM")
+    // Regex looks for: 15/03/2026
+    const ddmmyyyy = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    
+    if (ddmmyyyy) {
+      const day = ddmmyyyy[1];
+      const month = ddmmyyyy[2];
+      const year = ddmmyyyy[3];
+      
+      // Convert to "YYYY-MM-DD" which JS likes
+      // Also keep the time part if it exists
+      const timePart = str.split(',')[1] || ''; 
+      const isoString = `${year}-${month}-${day} ${timePart}`;
+      
+      date = new Date(isoString);
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     const calculateTime = () => {
-      // Parse "28 Feb 2026 11:59:00 PM"
-      const targetDate = new Date(deadlineStr);
+      const targetDate = parseDate(deadlineStr);
+      
+      if (!targetDate) {
+        setTimeLeft("Invalid Date");
+        return;
+      }
+
       const now = new Date();
       const diff = targetDate.getTime() - now.getTime();
 
@@ -27,7 +61,7 @@ export default function Countdown({ deadlineStr }: { deadlineStr: string }) {
     };
 
     calculateTime();
-    const timer = setInterval(calculateTime, 60000); // Update every minute
+    const timer = setInterval(calculateTime, 60000); 
     return () => clearInterval(timer);
   }, [deadlineStr]);
 
