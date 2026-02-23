@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea"; // Make sure to add this if missing, or use <textarea>
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, FileText, Save, Edit2, Clock, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
+import { ExternalLink, FileText, Save, Edit2, CheckCircle2, Copy } from "lucide-react"; 
+import { toast } from "sonner"; // <--- IMPORT SONNER
 import Countdown from "./Countdown";
 
 export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) {
@@ -16,8 +17,8 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     position: job.position || "",
     portalUsername: job.portalUsername || "",
     portalPassword: job.portalPassword || "",
-    status: job.status || "Pending", // Add Status to form data
-    notes: job.notes || ""           // Add Notes to form data
+    status: job.status || "Pending",
+    notes: job.notes || ""
   });
 
   const handleSave = async () => {
@@ -32,12 +33,21 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     onUpdate(); 
   };
 
-  // Helper for Status Colors
+  // --- SONNER COPY FUNCTION ---
+  const copyToClipboard = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast.success("Copied!", {
+      description: `${label} copied to clipboard.`,
+      duration: 2000,
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'Applied': return "default"; // Black/Grey
-      case 'Interview': return "secondary"; // Purple/Blue (depending on theme)
-      case 'Rejected': return "destructive"; // Red
+      case 'Applied': return "default"; 
+      case 'Interview': return "secondary"; 
+      case 'Rejected': return "destructive"; 
       default: return "outline";
     }
   };
@@ -63,7 +73,7 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
           {job.appliedDate && <span className="text-green-600 font-medium">Applied: {new Date(job.appliedDate).toLocaleDateString()}</span>}
         </div>
 
-        {/* DEADLINE (Only if Pending) */}
+        {/* DEADLINE */}
         {job.status === 'Pending' && !isEditing && (
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
@@ -79,8 +89,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
         {/* --- EDIT MODE --- */}
         {isEditing ? (
           <div className="space-y-3 bg-slate-50 p-3 rounded-lg border shadow-inner animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* 1. STATUS DROPDOWN */}
             <div>
               <Label className="text-xs text-gray-500 font-bold">Current Status</Label>
               <Select 
@@ -99,7 +107,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               </Select>
             </div>
 
-            {/* 2. POSITION & CREDENTIALS */}
             <div>
               <Label className="text-xs text-gray-500">Position</Label>
               <Input value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} className="bg-white h-8 text-sm"/>
@@ -115,9 +122,8 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               </div>
             </div>
 
-            {/* 3. NOTES TEXTAREA */}
             <div>
-              <Label className="text-xs text-gray-500">Notes / Exam Result / Remarks</Label>
+              <Label className="text-xs text-gray-500">Notes / Remarks</Label>
               <Textarea 
                 value={formData.notes} 
                 onChange={(e) => setFormData({...formData, notes: e.target.value})} 
@@ -125,26 +131,38 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
                 placeholder="e.g. Exam on 25th, Score 40/50..."
               />
             </div>
-
           </div>
         ) : (
           /* --- VIEW MODE --- */
           <>
-            {/* Credentials Display */}
+            {/* CREDENTIALS DISPLAY WITH COPY BUTTONS */}
             {job.status !== 'Pending' && (
               <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-100">
-                <div className="flex justify-between text-xs">
+                <div className="flex justify-between items-center text-xs group">
                   <span className="font-bold text-slate-500">USER:</span>
-                  <span className="font-mono select-all">{job.portalUsername || "--"}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono">{job.portalUsername || "--"}</span>
+                    {job.portalUsername && (
+                      <button onClick={() => copyToClipboard(job.portalUsername, "Username")} className="text-slate-400 hover:text-blue-600 transition-colors">
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs">
+                <div className="flex justify-between items-center text-xs group">
                   <span className="font-bold text-slate-500">PASS:</span>
-                  <span className="font-mono bg-slate-200 px-1 rounded select-all">{job.portalPassword || "--"}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono bg-slate-200 px-1 rounded">{job.portalPassword || "--"}</span>
+                    {job.portalPassword && (
+                      <button onClick={() => copyToClipboard(job.portalPassword, "Password")} className="text-slate-400 hover:text-blue-600 transition-colors">
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Notes Display */}
             {job.notes && (
               <div className="bg-yellow-50 border border-yellow-200 p-2 rounded text-xs text-slate-700 italic">
                 <span className="font-bold text-yellow-700 not-italic">📝 Note: </span>
