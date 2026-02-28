@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, FileText, Save, Edit2, CheckCircle2, Copy } from "lucide-react"; 
-import { toast } from "sonner"; // <--- IMPORT SONNER
+import { ExternalLink, Save, Edit2, Copy, CalendarCheck, Ticket } from "lucide-react"; 
+import { toast } from "sonner"; 
 import Countdown from "./Countdown";
+import PdfModal from "./PdfModal"; // <--- Updated Modal
 
 export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -18,7 +19,9 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     portalUsername: job.portalUsername || "",
     portalPassword: job.portalPassword || "",
     status: job.status || "Pending",
-    notes: job.notes || ""
+    notes: job.notes || "",
+    examDate: job.examDate || "",           // <--- NEW
+    admitCardUrl: job.admitCardUrl || ""    // <--- NEW
   });
 
   const handleSave = async () => {
@@ -33,7 +36,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     onUpdate(); 
   };
 
-  // --- SONNER COPY FUNCTION ---
   const copyToClipboard = (text: string, label: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -91,13 +93,8 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
           <div className="space-y-3 bg-slate-50 p-3 rounded-lg border shadow-inner animate-in fade-in zoom-in-95 duration-200">
             <div>
               <Label className="text-xs text-gray-500 font-bold">Current Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(val) => setFormData({...formData, status: val})}
-              >
-                <SelectTrigger className="h-8 bg-white">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
+              <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
+                <SelectTrigger className="h-8 bg-white"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="Applied">Applied</SelectItem>
@@ -111,6 +108,7 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               <Label className="text-xs text-gray-500">Position</Label>
               <Input value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} className="bg-white h-8 text-sm"/>
             </div>
+            
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs text-gray-500">Username</Label>
@@ -119,6 +117,18 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               <div>
                 <Label className="text-xs text-gray-500">Password</Label>
                 <Input value={formData.portalPassword} onChange={(e) => setFormData({...formData, portalPassword: e.target.value})} className="bg-white h-8 text-sm font-mono"/>
+              </div>
+            </div>
+
+            {/* NEW: EXAM TRACKING INPUTS */}
+            <div className="grid grid-cols-2 gap-2 p-2 bg-blue-50/50 rounded border border-blue-100">
+              <div>
+                <Label className="text-[10px] font-bold text-blue-600 uppercase">Exam Date</Label>
+                <Input type="date" value={formData.examDate} onChange={(e) => setFormData({...formData, examDate: e.target.value})} className="bg-white h-8 text-xs"/>
+              </div>
+              <div>
+                <Label className="text-[10px] font-bold text-blue-600 uppercase">Admit Card URL</Label>
+                <Input type="url" placeholder="https://" value={formData.admitCardUrl} onChange={(e) => setFormData({...formData, admitCardUrl: e.target.value})} className="bg-white h-8 text-xs"/>
               </div>
             </div>
 
@@ -135,7 +145,24 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
         ) : (
           /* --- VIEW MODE --- */
           <>
-            {/* CREDENTIALS DISPLAY WITH COPY BUTTONS */}
+            {/* EXAM TRACKING DISPLAY */}
+            {(job.examDate || job.admitCardUrl) && (
+              <div className="flex items-center justify-between bg-blue-50 p-2.5 rounded-lg border border-blue-100 animate-in fade-in">
+                {job.examDate && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-800">
+                    <CalendarCheck className="w-4 h-4 text-blue-600" />
+                    <span>Exam: {new Date(job.examDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {job.admitCardUrl && (
+                  <a href={job.admitCardUrl} target="_blank" className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-md hover:bg-blue-700 transition-colors shadow-sm ml-auto">
+                    <Ticket className="w-3 h-3" /> Get Admit
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* CREDENTIALS */}
             {job.status !== 'Pending' && (
               <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-100">
                 <div className="flex justify-between items-center text-xs group">
@@ -172,26 +199,22 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
           </>
         )}
 
-        {/* Links */}
-        <div className="flex gap-3 pt-1">
-          <a href={job.jobUrl} target="_blank" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-            <ExternalLink size={12} /> Link
+        {/* --- LINKS SECTION --- */}
+        <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-100">
+          <a href={job.jobUrl} target="_blank" className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-2.5 py-1.5 rounded-md border border-blue-100/50 hover:bg-blue-100">
+            <ExternalLink size={14} /> Source Link
           </a>
+          
+          {/* NEW: Pass the entire job object and onUpdate to the PDF Modal */}
           {job.localPdfPath && (
-            <a href={job.localPdfPath} target="_blank" className="flex items-center gap-1 text-xs text-red-600 hover:underline">
-              <FileText size={12} /> PDF
-            </a>
+            <PdfModal job={job} onUpdate={onUpdate} />
           )}
         </div>
       </CardContent>
 
       <CardFooter className="pt-0">
         {!isEditing ? (
-          <Button 
-            onClick={() => setIsEditing(true)} 
-            className="w-full bg-white text-slate-600 border hover:bg-slate-50" 
-            size="sm"
-          >
+          <Button onClick={() => setIsEditing(true)} className="w-full bg-white text-slate-600 border hover:bg-slate-50 shadow-sm" size="sm">
             <Edit2 className="w-3 h-3 mr-2" /> Edit Info / Status
           </Button>
         ) : (
