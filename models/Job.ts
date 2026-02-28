@@ -18,7 +18,7 @@ const JobSchema = new mongoose.Schema({
   // ----------------------
 
   appliedDate: { type: Date },
-  
+
   examDate: { type: String, default: "" },
   admitCardUrl: { type: String, default: "" },
   aiSummary: {
