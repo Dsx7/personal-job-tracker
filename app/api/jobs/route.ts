@@ -48,3 +48,30 @@ export async function PUT(req: Request) {
   
   return NextResponse.json(updatedJob);
 }
+
+
+
+// Add this at the bottom of app/api/jobs/route.ts
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: "Job ID is required" }, { status: 400 });
+    }
+
+    await connectToDB();
+    const deletedJob = await Job.findByIdAndDelete(id);
+
+    if (!deletedJob) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: "Job deleted successfully" });
+  } catch (error: any) {
+    console.error("DELETE JOB ERROR:", error);
+    return NextResponse.json({ error: "Failed to delete job" }, { status: 500 });
+  }
+}

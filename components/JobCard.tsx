@@ -20,7 +20,8 @@ import {
   KeyRound, 
   Clock,
   CalendarDays,
-  AlignLeft
+  AlignLeft,
+  Trash2 // <--- ADDED TRASH ICON
 } from "lucide-react"; 
 import { toast } from "sonner"; 
 import Countdown from "./Countdown";
@@ -28,6 +29,7 @@ import PdfModal from "./PdfModal";
 
 export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // <--- DELETING STATE
   const [formData, setFormData] = useState({
     position: job.position || "",
     portalUsername: job.portalUsername || "",
@@ -39,18 +41,15 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
   });
 
   const handleSave = async () => {
-    // 1. Prepare the payload
     const payload: any = {
       _id: job._id,
       ...formData
     };
 
-    // 2. AUTO-STAMP APPLIED DATE
     if (formData.status === 'Applied' && !job.appliedDate) {
       payload.appliedDate = new Date().toISOString();
     }
 
-    // 3. Send to database
     await fetch('/api/jobs', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -59,6 +58,31 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     
     setIsEditing(false);
     onUpdate(); 
+  };
+
+  // --- NEW DELETE FUNCTION ---
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${job.organization}? This cannot be undone.`)) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/jobs?id=${job._id}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        toast.success("Job deleted successfully!");
+        onUpdate(); // Refresh the dashboard
+      } else {
+        toast.error("Failed to delete job.");
+        setIsDeleting(false);
+      }
+    } catch (e) {
+      toast.error("An error occurred.");
+      setIsDeleting(false);
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -70,7 +94,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
     });
   };
 
-  // Upgraded custom badge styles
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'Applied': 
@@ -168,7 +191,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               </div>
             </div>
 
-            {/* EXAM TRACKING INPUTS */}
             <div className="grid grid-cols-2 gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100/60">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Exam Date</Label>
@@ -194,7 +216,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
           /* --- VIEW MODE --- */
           <div className="space-y-4">
             
-            {/* EXAM TRACKING DISPLAY */}
             {(job.examDate || job.admitCardUrl) && (
               <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50/30 p-3 rounded-xl border border-blue-100/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)]">
                 {job.examDate && (
@@ -213,7 +234,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               </div>
             )}
 
-            {/* SECURE CREDENTIALS VAULT */}
             {job.status !== 'Pending' && (job.portalUsername || job.portalPassword) && (
               <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-1.5">
                 <div className="flex flex-col gap-1">
@@ -248,7 +268,6 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
               </div>
             )}
 
-            {/* NOTES */}
             {job.notes && (
               <div className="flex items-start gap-2 bg-amber-50/40 border border-amber-100/80 p-3 rounded-xl text-xs text-slate-700">
                 <AlignLeft className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
@@ -277,9 +296,23 @@ export default function JobCard({ job, onUpdate }: { job: any, onUpdate: any }) 
 
         {/* Action Buttons */}
         {!isEditing ? (
-          <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full text-slate-500 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 h-9 rounded-xl transition-all group-hover:border-solid">
-            <Edit2 className="w-3.5 h-3.5 mr-2" /> Edit Details
-          </Button>
+          <div className="flex gap-2 w-full">
+            {/* The main Edit button */}
+            <Button onClick={() => setIsEditing(true)} variant="outline" className="flex-1 text-slate-500 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 h-9 rounded-xl transition-all group-hover:border-solid">
+              <Edit2 className="w-3.5 h-3.5 mr-2" /> Edit Details
+            </Button>
+            
+            {/* The new Delete Button */}
+            <Button 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+              variant="outline" 
+              className="w-10 px-0 h-9 rounded-xl border-dashed border-slate-300 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-all group-hover:border-solid"
+              title="Delete Job"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2 w-full mt-2">
             <Button onClick={() => setIsEditing(false)} variant="ghost" className="w-1/3 h-10 rounded-xl text-slate-500">Cancel</Button>

@@ -15,6 +15,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
+// Create Axios client that ignores SSL errors
 const scraperClient = axios.create({
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   headers: {
@@ -37,9 +38,7 @@ export async function POST(req: Request) {
     let userId = (session.user as any).id;
     if (!userId) {
       const user = await User.findOne({ email: session.user.email });
-      if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
+      if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
       userId = user._id;
     }
 
@@ -64,45 +63,37 @@ export async function POST(req: Request) {
       }
     });
 
-    // Resolve URL
+    // --- THE FIX: SMART URL RESOLVER ---
+    // This perfectly merges relative paths with the base URL, keeping subfolders intact!
     if (pdfLink && !pdfLink.startsWith('http')) {
-      const baseUrlObj = new URL(url);
-      pdfLink = pdfLink.startsWith('/') ? `${baseUrlObj.origin}${pdfLink}` : `${baseUrlObj.origin}/${pdfLink}`;
+      try {
+        pdfLink = new URL(pdfLink, url).href;
+      } catch (e) {
+        console.error("URL parsing error", e);
+      }
     }
 
-    // --- UPLOAD TO CLOUDINARY (PROXY + FORCE EXTENSION) ---
+    // --- UPLOAD TO CLOUDINARY ---
     let savedFilePath = "";
     
     if (pdfLink) {
       try {
-        console.log(`Downloading PDF locally first: ${pdfLink}`);
+        console.log(`Downloading PDF to Base64: ${pdfLink}`);
         
-        // 1. Download
         const response = await scraperClient.get(pdfLink, { responseType: 'arraybuffer' });
         const base64Data = Buffer.from(response.data).toString('base64');
         const fileDataUri = `data:application/pdf;base64,${base64Data}`;
 
-        // 2. Generate a Name
-        const timestamp = Date.now();
-        const customName = `job_ad_${timestamp}`; // Clean name
+        const customName = `job_ad_${Date.now()}`;
+        console.log(`Uploading to Cloudinary...`);
 
-        console.log(`Uploading to Cloudinary as ${customName}.pdf ...`);
-
-        // 3. Upload with Explicit Filename
         const uploadResult = await cloudinary.uploader.upload(fileDataUri, {
           folder: "job_raw_files",
-          public_id: customName,   // <--- FORCE NAME (e.g. job_ad_12345)
-          format: "pdf",           // <--- FORCE EXTENSION to .pdf
-          resource_type: "raw",    
-          type: "upload",
-          access_mode: "public"
+          public_id: customName,
+          resource_type: "auto", 
         });
 
-        // 4. Remove Version & Ensure .pdf extension in URL
-        // If resource_type is raw, Cloudinary sometimes forgets the extension in the URL
         let finalUrl = uploadResult.secure_url.replace(/\/v\d+\//, "/");
-        
-        // Double check it ends in .pdf
         if (!finalUrl.endsWith('.pdf')) {
           finalUrl = `${finalUrl}.pdf`;
         }
@@ -111,10 +102,13 @@ export async function POST(req: Request) {
         console.log(`Success: ${savedFilePath}`);
 
       } catch (e: any) {
-        console.error("Cloudinary Upload failed:", e.message);
+        console.error("Cloudinary Upload failed:", e.message || e);
+        // Fallback: If upload fails, just save the direct Teletalk link so it's never broken!
+        savedFilePath = pdfLink; 
       }
     }
 
+    // --- SAVE TO DATABASE ---
     const newJob = await Job.create({
       userId: userId,
       organization,
