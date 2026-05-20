@@ -78,16 +78,24 @@ export async function POST(req: Request) {
     
     if (pdfLink) {
       try {
-        console.log(`Downloading PDF to Base64: ${pdfLink}`);
-        
-        const response = await scraperClient.get(pdfLink, { responseType: 'arraybuffer' });
-        const base64Data = Buffer.from(response.data).toString('base64');
-        const fileDataUri = `data:application/pdf;base64,${base64Data}`;
+        console.log(`Uploading PDF to Cloudinary: ${pdfLink}`);
+
+        // Check if Cloudinary is configured
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          console.error("Missing Cloudinary Env Vars:", {
+            cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: !!process.env.CLOUDINARY_API_KEY,
+            api_secret: !!process.env.CLOUDINARY_API_SECRET,
+          });
+          throw new Error("Cloudinary environment variables are missing in Vercel settings.");
+        }
 
         const customName = `job_ad_${Date.now()}`;
-        console.log(`Uploading to Cloudinary...`);
 
-        const uploadResult = await cloudinary.uploader.upload(fileDataUri, {
+        // OPTIMIZATION: Pass the URL directly to Cloudinary
+        // This avoids downloading the file to Vercel and converting to Base64,
+        // preventing timeouts and memory limits on the free tier.
+        const uploadResult = await cloudinary.uploader.upload(pdfLink, {
           folder: "job_raw_files",
           public_id: customName,
           resource_type: "auto", 
@@ -103,7 +111,7 @@ export async function POST(req: Request) {
 
       } catch (e: any) {
         console.error("Cloudinary Upload failed:", e.message || e);
-        // Fallback: If upload fails, just save the direct Teletalk link so it's never broken!
+        // Fallback: If upload fails, just save the direct link so it's never broken!
         savedFilePath = pdfLink; 
       }
     }
