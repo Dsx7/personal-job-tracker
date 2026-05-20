@@ -78,27 +78,39 @@ export async function POST(req: Request) {
     
     if (pdfLink) {
       try {
-        console.log(`Uploading PDF to Cloudinary: ${pdfLink}`);
+        console.log(`Downloading PDF to Vercel: ${pdfLink}`);
 
         // Check if Cloudinary is configured
         if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-          console.error("Missing Cloudinary Env Vars:", {
-            cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: !!process.env.CLOUDINARY_API_KEY,
-            api_secret: !!process.env.CLOUDINARY_API_SECRET,
-          });
-          throw new Error("Cloudinary environment variables are missing in Vercel settings.");
+          throw new Error("Cloudinary environment variables are missing");
         }
+
+        // 1. Download the PDF directly on Vercel
+        // We use our scraperClient because it handles the 'rejectUnauthorized' for teletalk sites
+        const response = await scraperClient.get(pdfLink, { 
+          responseType: 'arraybuffer',
+          timeout: 8000 // 8 second timeout for the download phase
+        });
+
+        const buffer = Buffer.from(response.data);
+        console.log(`Download successful (${buffer.length} bytes). Uploading to Cloudinary...`);
 
         const customName = `job_ad_${Date.now()}`;
 
-        // OPTIMIZATION: Pass the URL directly to Cloudinary
-        // This avoids downloading the file to Vercel and converting to Base64,
-        // preventing timeouts and memory limits on the free tier.
-        const uploadResult = await cloudinary.uploader.upload(pdfLink, {
-          folder: "job_raw_files",
-          public_id: customName,
-          resource_type: "auto", 
+        // 2. Upload the Buffer to Cloudinary using a Promise-wrapped stream
+        const uploadResult: any = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "job_raw_files",
+              public_id: customName,
+              resource_type: "auto", 
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(buffer);
         });
 
         let finalUrl = uploadResult.secure_url.replace(/\/v\d+\//, "/");
@@ -110,8 +122,8 @@ export async function POST(req: Request) {
         console.log(`Success: ${savedFilePath}`);
 
       } catch (e: any) {
-        console.error("Cloudinary Upload failed:", e.message || e);
-        // Fallback: If upload fails, just save the direct link so it's never broken!
+        console.error("Cloudinary/Download failed:", e.message || e);
+        // Fallback: If anything fails, save the direct link so the user doesn't lose the data
         savedFilePath = pdfLink; 
       }
     }
