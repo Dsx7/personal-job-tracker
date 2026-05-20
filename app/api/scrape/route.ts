@@ -44,9 +44,10 @@ export async function POST(req: Request) {
 
     console.log(`Scraping: ${url}`);
 
-    // Fetch HTML
-    const { data } = await scraperClient.get(url);
-    const $ = cheerio.load(data);
+    // Fetch HTML and capture cookies
+    const mainPageResponse = await scraperClient.get(url);
+    const cookies = mainPageResponse.headers['set-cookie'];
+    const $ = cheerio.load(mainPageResponse.data);
 
     // Extract Deadline
     const bodyText = $('body').text();
@@ -64,7 +65,6 @@ export async function POST(req: Request) {
     });
 
     // --- THE FIX: SMART URL RESOLVER ---
-    // This perfectly merges relative paths with the base URL, keeping subfolders intact!
     if (pdfLink && !pdfLink.startsWith('http')) {
       try {
         pdfLink = new URL(pdfLink, url).href;
@@ -80,20 +80,23 @@ export async function POST(req: Request) {
       try {
         console.log(`Downloading PDF to Vercel: ${pdfLink}`);
 
-        // Check if Cloudinary is configured
         if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
           throw new Error("Cloudinary environment variables are missing");
         }
 
-        // 1. Download the PDF directly on Vercel
-        // We use our scraperClient because it handles the 'rejectUnauthorized' for teletalk sites
+        // 1. Download PDF with session context (Cookies + Referer)
+        // This is critical for Teletalk sites to prevent ECONNRESET
         const response = await scraperClient.get(pdfLink, { 
           responseType: 'arraybuffer',
-          timeout: 8000 // 8 second timeout for the download phase
+          headers: {
+            'Referer': url,
+            'Cookie': cookies ? cookies.join('; ') : ''
+          },
+          timeout: 15000 // 15s timeout
         });
 
         const buffer = Buffer.from(response.data);
-        console.log(`Download successful (${buffer.length} bytes). Uploading to Cloudinary...`);
+        console.log(`Download successful (${buffer.length} bytes). Uploading...`);
 
         const customName = `job_ad_${Date.now()}`;
 
