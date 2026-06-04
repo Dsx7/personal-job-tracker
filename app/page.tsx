@@ -104,6 +104,21 @@ export default function Dashboard() {
   const appliedJobs = filteredJobs
     .filter(job => job.status === 'Applied')
     .sort((a, b) => {
+      const hasExamA = a.examDate && a.examDate.trim() !== "";
+      const hasExamB = b.examDate && b.examDate.trim() !== "";
+
+      if (hasExamA && hasExamB) {
+        const timeA = new Date(a.examDate).getTime();
+        const timeB = new Date(b.examDate).getTime();
+        if (!isNaN(timeA) && !isNaN(timeB)) {
+          return timeA - timeB; // Nearest exam first
+        }
+      } 
+      
+      if (hasExamA && !hasExamB) return -1;
+      if (!hasExamA && hasExamB) return 1;
+
+      // Fallback
       const dateA = a.appliedDate ? new Date(a.appliedDate).getTime() : new Date(a.updatedAt).getTime();
       const dateB = b.appliedDate ? new Date(b.appliedDate).getTime() : new Date(b.updatedAt).getTime();
       return dateB - dateA;
